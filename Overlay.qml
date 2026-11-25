@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
@@ -16,6 +17,7 @@ Item {
   property bool opened: false
   property bool showChanges: false
   property bool confirmingSwitch: false
+  property string gamescopeExtraArgs: ""
 
   readonly property string pluginId: "io.github.jcarcinogen.gaming-console"
   readonly property string statusState: service ? service.statusState : "unsupported"
@@ -39,6 +41,7 @@ Item {
     root.showChanges = false
     root.confirmingSwitch = false
     if (root.service) root.service.refresh()
+    root.loadGamescopeArgs()
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
@@ -56,6 +59,28 @@ Item {
   function run(action) {
     if (!root.service || !root.service.runAction(action)) return
     root.dismiss()
+  }
+
+  function loadGamescopeArgs() {
+    var process = Qt.createComponent("Process.qml")
+    if (process.status !== Component.Ready) return
+    var proc = process.createObject(root, {
+      command: ["/bin/sh", "-c", "cat ${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-gaming-console/gamescope-args 2>/dev/null || true"],
+      stdout: StdioCollector { waitForEnd: true; onData: function(data) { root.gamescopeExtraArgs = String(data).trim() } }
+    })
+    proc.running = true
+  }
+
+  function saveGamescopeArgs(args) {
+    var sanitized = String(args).trim()
+    root.gamescopeExtraArgs = sanitized
+    var process = Qt.createComponent("Process.qml")
+    if (process.status !== Component.Ready) return
+    var proc = process.createObject(root, {
+      command: ["/bin/sh", "-c", "mkdir -p ${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-gaming-console && printf '%s\n' " + JSON.stringify(sanitized) + " > ${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-gaming-console/gamescope-args"],
+      onExited: function(exitCode) { if (exitCode !== 0) root.service.lastError = "Failed to save Gamescope arguments" }
+    })
+    proc.running = true
   }
 
   component ActionButton: Rectangle {
@@ -276,6 +301,59 @@ Item {
             ActionButton {
               label: "Uninstall Game Mode"
               onTriggered: root.run("uninstall")
+            }
+
+            Rectangle {
+              width: parent.width
+              height: Style.space(1)
+              color: root.borderColor
+              radius: 0
+            }
+
+            Text {
+              width: parent.width
+              text: "Gamescope Extra Arguments"
+              textFormat: Text.PlainText
+              color: root.foregroundColor
+              font.family: Style.font.family
+              font.pixelSize: Style.font.body
+              font.weight: Font.DemiBold
+            }
+
+            Text {
+              width: parent.width
+              text: "Additional arguments passed to Gamescope (e.g., -O DP-3). Empty by default."
+              textFormat: Text.PlainText
+              wrapMode: Text.WordWrap
+              color: root.mutedColor
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            Rectangle {
+              width: parent.width
+              height: Style.space(40)
+              color: Qt.rgba(root.foregroundColor.r, root.foregroundColor.g, root.foregroundColor.b, 0.08)
+              border.color: root.borderColor
+              border.width: Math.max(1, Style.space(1))
+              radius: Style.cornerRadius
+
+              TextInput {
+                id: gamescopeArgsField
+                anchors.fill: parent
+                anchors.margins: Style.space(8)
+                placeholderText: "-O DP-3"
+                text: root.gamescopeExtraArgs
+                color: root.foregroundColor
+                font.family: Style.font.family
+                font.pixelSize: Style.font.body
+                onAccepted: root.saveGamescopeArgs(gamescopeArgsField.text)
+              }
+            }
+
+            ActionButton {
+              label: "Save Gamescope Arguments"
+              onTriggered: root.saveGamescopeArgs(gamescopeArgsField.text)
             }
           }
 

@@ -20,7 +20,7 @@ from pathlib import Path
 
 EXPECTED = {
     "install.sh": "9c38aecd9319f26f1287824b5c8eaae7f81a5c010e02a24a450bd3e3e1c4a175",
-    "omarchy-console-session": "fe73f4f816bb139391ebdf6ddb0fc3bca7d374ed115de8b485b756364c2bf5b7",
+    "omarchy-console-session": "dc7fd91706f54908adc4e966a86dc79c96317b2836b986c689e22f8d3d5673e6",
     "omarchy-console.desktop": "c46c565a65dc338062466b722a7505bdb0959fcc05d24f36b21023a6d7907bd8",
     "omarchy-switch-to-console": "1c3b62baea3870f40945783064f4c561799a5fc8762a05acc68226418a8c6e0b",
     "org.omarchy.gaming-console.policy": "ecf940f89b352ec38776096abcc2281f896a6a19ac9e8cdc2b02ab99c7844bcf",

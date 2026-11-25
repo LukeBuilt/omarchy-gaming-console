@@ -95,6 +95,25 @@ if [[ -e $mode_file || -L $mode_file ]]; then
   }
 fi
 
+# Optional user data: extra Gamescope launch arguments (one line, shell-safe).
+# Empty or missing file means no extra arguments.
+gamescope_args_file=${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-gaming-console/gamescope-args
+gamescope_extra_args=
+read_gamescope_args() {
+  [[ -f $gamescope_args_file && ! -L $gamescope_args_file ]] || return 1
+  {
+    IFS= read -r -n 4096 gamescope_extra_args || [[ -n $gamescope_extra_args ]] || return 1
+    if IFS= read -r -n 1 extra; then return 1; fi
+    [[ -z $extra ]] || return 1
+  } < "$gamescope_args_file"
+}
+if [[ -e $gamescope_args_file || -L $gamescope_args_file ]]; then
+  read_gamescope_args || {
+    printf 'Invalid Console gamescope-args preference; expected a single line of arguments.\n' >&2
+    exit 78
+  }
+fi
+
 # Steam exposes native output-mode controls only with a mode-save path.
 # This is unprivileged user preference data, preserved by engine uninstall.
 mode_dir=${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-gaming-console
@@ -127,9 +146,9 @@ cleanup_console_portal() {
 trap cleanup_console_portal EXIT
 
 if [[ -n $display_mode ]]; then
-  /usr/bin/gamescope --steam --mangoapp --xwayland-count 2 -W "$width" -H "$height" -r "$refresh" -- \
+  /usr/bin/gamescope --steam --mangoapp --xwayland-count 2 -W "$width" -H "$height" -r "$refresh" ${gamescope_extra_args:+$gamescope_extra_args} -- \
     /usr/bin/steam -gamepadui -steamos3
 else
-  /usr/bin/gamescope --steam --mangoapp --xwayland-count 2 -- \
+  /usr/bin/gamescope --steam --mangoapp --xwayland-count 2 ${gamescope_extra_args:+$gamescope_extra_args} -- \
     /usr/bin/steam -gamepadui -steamos3
 fi
